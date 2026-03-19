@@ -68,11 +68,23 @@ def _fetch_crypto(pair: str, tf: str, limit: int) -> pd.DataFrame:
         import ccxt
     except ImportError:
         raise ImportError("pip install ccxt")
-    ex = ccxt.binance({"enableRateLimit": True})
-    raw = ex.fetch_ohlcv(pair, tf, limit=limit)
-    df = pd.DataFrame(raw, columns=["ts", "open", "high", "low", "close", "volume"])
-    df["ts"] = pd.to_datetime(df["ts"], unit="ms")
-    return df.set_index("ts")
+    # OKX 对国内 IP 可访问；Binance 在大陆受限(451)
+    exchanges = [
+        ccxt.okx({"enableRateLimit": True}),
+        ccxt.gateio({"enableRateLimit": True}),
+        ccxt.bybit({"enableRateLimit": True}),
+    ]
+    last_err = None
+    for ex in exchanges:
+        try:
+            raw = ex.fetch_ohlcv(pair, tf, limit=limit)
+            df = pd.DataFrame(raw, columns=["ts", "open", "high", "low", "close", "volume"])
+            df["ts"] = pd.to_datetime(df["ts"], unit="ms")
+            return df.set_index("ts")
+        except Exception as e:
+            last_err = e
+            continue
+    raise ConnectionError(f"所有交易所均无法访问，最后错误：{last_err}")
 
 
 def _fetch_yfinance(sym: str, interval: str, period: str, limit: int) -> pd.DataFrame:
