@@ -25,6 +25,11 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+st.markdown(
+    "<style>[data-testid='stToolbar'] {display: none;}</style>",
+    unsafe_allow_html=True,
+)
+
 PRESET_SYMBOLS = ["BTC", "ETH", "SOL", "AAPL", "NVDA", "TSLA", "600519", "00700"]
 TIMEFRAMES     = ["15min", "1h", "4h", "日线"]
 MODELS         = ["qwen-max", "qwen-plus", "qwen-turbo"]
@@ -79,11 +84,6 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("🔑 修改千问 Token", use_container_width=True):
-        del st.session_state["qwen_api_key"]
-        st.rerun()
-
-    st.divider()
     run_btn = st.button("▶ 开始分析", type="primary", use_container_width=True)
 
 
