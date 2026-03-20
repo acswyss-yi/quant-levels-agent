@@ -8,9 +8,10 @@ import json
 import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from openai import OpenAI
 
 from agent import (
-    fetch_ohlcv, analyze, get_qwen_client, send_dingtalk,
+    fetch_ohlcv, analyze, send_dingtalk,
     SYSTEM_PROMPT,
 )
 
@@ -27,6 +28,35 @@ st.set_page_config(
 PRESET_SYMBOLS = ["BTC", "ETH", "SOL", "AAPL", "NVDA", "TSLA", "600519", "00700"]
 TIMEFRAMES     = ["15min", "1h", "4h", "日线"]
 MODELS         = ["qwen-max", "qwen-plus", "qwen-turbo"]
+
+QWEN_BASE_URL  = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+
+# ─────────────────────────────────────────────
+# 千问 Token 弹框（首次启动时显示）
+# ─────────────────────────────────────────────
+@st.dialog("配置千问 API Token")
+def qwen_token_dialog():
+    st.markdown(
+        "请输入阿里云百炼平台的 API Key，可在 "
+        "[控制台](https://bailian.console.aliyun.com/) 中获取。"
+    )
+    token = st.text_input(
+        "DASHSCOPE_API_KEY",
+        type="password",
+        placeholder="sk-xxxxxxxxxxxx",
+    )
+    if st.button("确认", type="primary", use_container_width=True):
+        if not token.strip():
+            st.warning("Token 不能为空")
+        else:
+            st.session_state["qwen_api_key"] = token.strip()
+            st.rerun()
+
+
+if "qwen_api_key" not in st.session_state:
+    qwen_token_dialog()
+    st.stop()
 
 
 # ─────────────────────────────────────────────
@@ -46,6 +76,12 @@ with st.sidebar:
     timeframe = st.radio("K 线周期", TIMEFRAMES, index=2, horizontal=True)
     limit     = st.slider("K 线数量", min_value=100, max_value=500, value=300, step=50)
     model     = st.selectbox("千问模型", MODELS)
+
+    st.divider()
+
+    if st.button("🔑 修改千问 Token", use_container_width=True):
+        del st.session_state["qwen_api_key"]
+        st.rerun()
 
     st.divider()
     run_btn = st.button("▶ 开始分析", type="primary", use_container_width=True)
@@ -145,7 +181,11 @@ def render_metrics(ta_data: dict):
 # ─────────────────────────────────────────────
 # 流式 LLM 输出
 # ─────────────────────────────────────────────
-def stream_report(client, ta_data: dict, model: str):
+def stream_report(ta_data: dict, model: str):
+    client = OpenAI(
+        api_key=st.session_state["qwen_api_key"],
+        base_url=QWEN_BASE_URL,
+    )
     user_msg = (
         f"请分析以下市场数据：\n\n"
         f"```json\n{json.dumps(ta_data, ensure_ascii=False, indent=2)}\n```"
@@ -201,19 +241,17 @@ st.divider()
 
 # 5. LLM 流式报告
 st.subheader("🤖 千问分析报告")
-try:
-    client = get_qwen_client()
-except EnvironmentError as e:
-    st.error(str(e))
-    st.stop()
-
 report_placeholder = st.empty()
 full_report = ""
-with st.spinner("千问分析中..."):
-    for chunk in stream_report(client, ta_data, model):
-        full_report += chunk
-        report_placeholder.markdown(full_report + "▌")
-report_placeholder.markdown(full_report)
+try:
+    with st.spinner("千问分析中..."):
+        for chunk in stream_report(ta_data, model):
+            full_report += chunk
+            report_placeholder.markdown(full_report + "▌")
+    report_placeholder.markdown(full_report)
+except Exception as e:
+    st.error(f"千问调用失败：{e}（可点击侧边栏「修改千问 Token」重新输入）")
+    st.stop()
 
 # 6. 操作按钮
 st.divider()
