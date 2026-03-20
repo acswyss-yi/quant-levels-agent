@@ -4,7 +4,6 @@ Quant Levels Agent — Streamlit UI
 运行: streamlit run app.py
 """
 
-import os
 import json
 import streamlit as st
 import plotly.graph_objects as go
@@ -47,24 +46,6 @@ with st.sidebar:
     timeframe = st.radio("K 线周期", TIMEFRAMES, index=2, horizontal=True)
     limit     = st.slider("K 线数量", min_value=100, max_value=500, value=300, step=50)
     model     = st.selectbox("千问模型", MODELS)
-
-    st.divider()
-    st.subheader("📨 钉钉推送")
-    enable_dingtalk = st.checkbox("启用推送")
-    dingtalk_webhook, dingtalk_secret = None, None
-    if enable_dingtalk:
-        dingtalk_webhook = st.text_input(
-            "Webhook URL",
-            value=os.getenv("DINGTALK_WEBHOOK", ""),
-            type="password",
-            placeholder="https://oapi.dingtalk.com/robot/send?access_token=xxx",
-        )
-        dingtalk_secret = st.text_input(
-            "加签密钥（可选）",
-            value=os.getenv("DINGTALK_SECRET", ""),
-            type="password",
-            placeholder="SECxxx",
-        )
 
     st.divider()
     run_btn = st.button("▶ 开始分析", type="primary", use_container_width=True)
@@ -242,17 +223,22 @@ with col_copy:
     st.code(full_report, language=None)
 
 with col_push:
-    if enable_dingtalk and dingtalk_webhook:
-        if st.button("📨 推送到钉钉", use_container_width=True):
+    dingtalk_token = st.text_input(
+        "钉钉机器人 Token",
+        type="password",
+        placeholder="粘贴 access_token",
+    )
+    if st.button("📨 推送到钉钉", use_container_width=True, disabled=not full_report):
+        if not dingtalk_token:
+            st.warning("请先输入 Token")
+        else:
+            webhook = f"https://oapi.dingtalk.com/robot/send?access_token={dingtalk_token}"
             with st.spinner("推送中..."):
                 try:
-                    send_dingtalk(dingtalk_webhook, full_report, symbol, timeframe,
-                                  dingtalk_secret or None)
+                    send_dingtalk(webhook, full_report, symbol, timeframe)
                     st.success("推送成功！")
                 except Exception as e:
                     st.error(f"推送失败：{e}")
-    else:
-        st.info("在侧边栏启用钉钉推送后可点击发送")
 
 # 7. 原始 TA 数据（折叠）
 with st.expander("🔬 查看原始 TA 数据"):
