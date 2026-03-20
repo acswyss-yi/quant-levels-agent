@@ -20,7 +20,7 @@ from agent import (
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="Quant Levels Agent",
-    page_icon="🕯",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -101,6 +101,18 @@ hr { border-color: #E0E0E0 !important; }
     position: fixed !important;
     left: 0 !important;
     right: 0 !important;
+}
+
+/* 弹框遮罩半透明 */
+[data-testid='stDialog']::before,
+.stDialog [data-baseweb='dialog'] ~ div,
+div[data-baseweb='block'] > div[role='dialog'] + div {
+    background: rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(2px) !important;
+}
+[data-testid='stDialogOverlay'] {
+    background: rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(2px) !important;
 }
 
 /* 主要按钮 */
@@ -188,7 +200,7 @@ if "qwen_api_key" not in st.session_state:
 # 侧边栏：参数输入
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🕯 Quant Levels Agent")
+    st.markdown("### Quant Levels Agent")
     st.divider()
 
     st.markdown("**📊 分析参数**")
