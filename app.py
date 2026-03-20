@@ -10,7 +10,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from main import (
+from agent import (
     fetch_ohlcv, analyze, get_qwen_client, send_dingtalk,
     SYSTEM_PROMPT,
 )
