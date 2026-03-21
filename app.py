@@ -25,71 +25,70 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# IBM Carbon 风格全局样式（白灰蓝）
 st.markdown("""
 <style>
 /* 隐藏 Deploy 按钮 */
 [data-testid='stToolbar'] {display: none;}
 
 /* 全局背景 */
-.stApp { background-color: #F9FAFB; }
-
-/* 侧边栏 */
-[data-testid='stSidebar'] {
-    background-color: #FFFFFF;
-    border-right: 1px solid #E0E0E0;
-}
-[data-testid='stSidebar'] * { color: #161616 !important; }
-[data-testid='stSidebarContent'] .stButton > button {
-    background-color: #0F62FE;
-    color: #ffffff;
-    border: none;
-    border-radius: 2px;
-    font-weight: 600;
-    transition: background 0.2s;
-}
-[data-testid='stSidebarContent'] .stButton > button:hover {
-    background-color: #0043CE;
-}
+.stApp { background-color: #FFFFFF; }
 
 /* 主区域文字 */
 .stApp, .stMarkdown, p, span, label { color: #161616; }
 
-/* 指标卡片背景 */
-[data-testid='stMetric'] {
-    background-color: #FFFFFF;
-    border: 1px solid #E0E0E0;
-    border-radius: 2px;
-    padding: 12px 16px !important;
+/* 侧边栏 */
+[data-testid='stSidebar'] {
+    background-color: #F9FAFB;
+    border-right: 1px solid #E0E0E0;
 }
-[data-testid='stMetricLabel'] { color: #8D8D8D !important; font-size: 12px !important; }
-[data-testid='stMetricValue'] {
-    color: #161616 !important;
-    font-size: 22px !important;
-    font-variant-numeric: tabular-nums;
+[data-testid='stSidebar'] * { color: #161616 !important; }
+[data-testid='stSidebarContent'] .stButton > button {
+    background-color: #0068FF;
+    color: #ffffff;
+    border: none;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 10px;
+    transition: background 0.2s;
+    width: 100%;
 }
-[data-testid='stMetricDelta'] { font-size: 12px !important; }
+[data-testid='stSidebarContent'] .stButton > button:hover {
+    background-color: #0052CC;
+}
 
 /* 分割线 */
 hr { border-color: #E0E0E0 !important; }
 
 /* expander */
 [data-testid='stExpander'] {
-    background-color: #FFFFFF;
+    background-color: #F9FAFB;
     border: 1px solid #E0E0E0;
-    border-radius: 2px;
+    border-radius: 4px;
 }
 
 /* 代码块 */
 .stCode, [data-testid='stCode'] {
-    background-color: #F4F4F4 !important;
+    background-color: #F9FAFB !important;
     border: 1px solid #E0E0E0 !important;
-    border-radius: 2px !important;
+    border-radius: 4px !important;
     color: #161616 !important;
 }
 
 /* info / error 提示 */
-[data-testid='stAlert'] { border-radius: 2px; }
+[data-testid='stAlert'] { border-radius: 4px; }
+
+/* 主要按钮 */
+.stButton > button[kind='primary'] {
+    background-color: #0068FF !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 3px;
+}
+.stButton > button[kind='primary']:hover {
+    background-color: #0052CC !important;
+}
 
 /* Token 弹框居中缩小 */
 [data-testid='stDialog'] > div {
@@ -103,54 +102,74 @@ hr { border-color: #E0E0E0 !important; }
     right: 0 !important;
 }
 
-/* 弹框遮罩半透明 */
-[data-testid='stDialog']::before,
-.stDialog [data-baseweb='dialog'] ~ div,
-div[data-baseweb='block'] > div[role='dialog'] + div {
-    background: rgba(0, 0, 0, 0.25) !important;
-    backdrop-filter: blur(2px) !important;
+/* 指标卡片 */
+[data-testid='stMetric'] {
+    background-color: #F9FAFB;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 12px 16px !important;
 }
+[data-testid='stMetricLabel'] { color: #999999 !important; font-size: 12px !important; }
+[data-testid='stMetricValue'] {
+    color: #161616 !important;
+    font-size: 22px !important;
+    font-variant-numeric: tabular-nums;
+}
+[data-testid='stMetricDelta'] { font-size: 12px !important; }
+
+/* 弹框遮罩半透明 */
 [data-testid='stDialogOverlay'] {
     background: rgba(0, 0, 0, 0.25) !important;
-    backdrop-filter: blur(2px) !important;
+    backdrop-filter: blur(3px) !important;
 }
 
-/* 主要按钮 */
-.stButton > button[kind='primary'] {
-    background-color: #0F62FE !important;
-    border: none !important;
-    color: #fff !important;
-    font-weight: 600;
-    border-radius: 2px;
-}
-.stButton > button[kind='primary']:hover {
-    background-color: #0043CE !important;
-}
-
-/* 价格 header 区域 */
+/* header 行 */
 .price-header {
     display: flex;
-    align-items: baseline;
-    gap: 16px;
-    padding: 12px 0 8px 0;
+    align-items: center;
+    gap: 0;
+    padding: 10px 0;
     border-bottom: 1px solid #E0E0E0;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
 }
-.price-symbol {
-    font-size: 20px;
+.ph-symbol {
+    font-size: 18px;
     font-weight: 700;
     color: #161616;
-    letter-spacing: 0.5px;
+    margin-right: 8px;
 }
-.price-value {
-    font-size: 30px;
+.ph-tf {
+    font-size: 13px;
+    color: #999999;
+    margin-right: 16px;
+}
+.ph-price {
+    font-size: 28px;
     font-weight: 700;
     color: #161616;
     font-variant-numeric: tabular-nums;
+    margin-right: 10px;
 }
-.price-up   { color: #24A148; font-size: 15px; font-weight: 600; }
-.price-down { color: #DA1E28; font-size: 15px; font-weight: 600; }
-.price-meta { color: #8D8D8D; font-size: 13px; }
+.ph-up   { color: #24A148; font-size: 13px; font-weight: 600; margin-right: 24px; }
+.ph-down { color: #DA1E28; font-size: 13px; font-weight: 600; margin-right: 24px; }
+.ph-metric {
+    display: flex;
+    flex-direction: column;
+    margin-right: 28px;
+    border-left: 1px solid #E0E0E0;
+    padding-left: 16px;
+}
+.ph-metric-label { font-size: 11px; color: #999999; margin-bottom: 2px; }
+.ph-metric-value { font-size: 13px; font-weight: 600; color: #161616; font-variant-numeric: tabular-nums; }
+.ph-metric-value.up   { color: #24A148; }
+.ph-metric-value.down { color: #DA1E28; }
+.ph-right {
+    margin-left: auto;
+    font-size: 12px;
+    color: #999999;
+    white-space: nowrap;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -162,17 +181,17 @@ QWEN_BASE_URL  = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 
 # ─────────────────────────────────────────────
-# 千问 Token 弹框（首次启动时显示）
+# 千问 Token 弹框
 # ─────────────────────────────────────────────
 @st.dialog("配置千问 API Token")
 def qwen_token_dialog():
     st.markdown("""
 <div style="text-align:center;padding:8px 0 16px 0;">
   <div style="font-size:32px;margin-bottom:8px;">🔑</div>
-  <div style="font-size:13px;color:#525252;line-height:1.6;">
+  <div style="font-size:13px;color:#666666;line-height:1.6;">
     输入阿里云百炼平台 API Key<br>
     <a href="https://bailian.console.aliyun.com/" target="_blank"
-       style="color:#0F62FE;font-size:12px;">前往控制台获取 →</a>
+       style="color:#0068FF;font-size:12px;">前往控制台获取 →</a>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -197,7 +216,7 @@ if "qwen_api_key" not in st.session_state:
 
 
 # ─────────────────────────────────────────────
-# 侧边栏：参数输入
+# 侧边栏
 # ─────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### Quant Levels Agent")
@@ -214,19 +233,20 @@ with st.sidebar:
     limit     = st.slider("K 线数量", min_value=100, max_value=500, value=300, step=50)
     model     = st.selectbox("千问模型", MODELS)
 
+    st.markdown("<div style='flex:1;min-height:40px'></div>", unsafe_allow_html=True)
     st.divider()
-    run_btn = st.button("▶ 开始分析", type="primary", use_container_width=True)
+    run_btn = st.button("▶  开始分析", type="primary", use_container_width=True)
 
 
 # ─────────────────────────────────────────────
-# K 线图（含 S/R 叠加）
+# K 线图
 # ─────────────────────────────────────────────
-CHART_BG    = "#131722"
-CHART_PANEL = "#1e222d"
-CHART_GRID  = "#2a2e39"
+CHART_BG    = "#FFFFFF"
+CHART_PANEL = "#F9FAFB"
+CHART_GRID  = "#E0E0E0"
 COLOR_UP    = "#24A148"
 COLOR_DOWN  = "#DA1E28"
-COLOR_BLUE  = "#0F62FE"
+COLOR_BLUE  = "#0068FF"
 
 def build_chart(df, ta_data: dict) -> go.Figure:
     fig = make_subplots(
@@ -257,7 +277,7 @@ def build_chart(df, ta_data: dict) -> go.Figure:
     current = ta_data["current_price"]
     x0, x1  = df.index[0], df.index[-1]
 
-    fig.add_hline(y=current, line_color=COLOR_BLUE, line_width=1.5,
+    fig.add_hline(y=current, line_color=COLOR_BLUE, line_width=1,
                   line_dash="dot", row=1, col=1)
 
     for lv in ta_data["resistance_levels"]:
@@ -280,7 +300,7 @@ def build_chart(df, ta_data: dict) -> go.Figure:
         height=580,
         paper_bgcolor=CHART_BG,
         plot_bgcolor=CHART_PANEL,
-        font=dict(color="#525252", family="Inter, sans-serif"),
+        font=dict(color="#666666", family="Inter, sans-serif"),
         xaxis_rangeslider_visible=False,
         showlegend=False,
         margin=dict(l=10, r=90, t=8, b=8),
@@ -293,21 +313,20 @@ def build_chart(df, ta_data: dict) -> go.Figure:
 # ─────────────────────────────────────────────
 # 价格 Header
 # ─────────────────────────────────────────────
-def render_price_header(symbol: str, timeframe: str, ta_data: dict, kline_count: int, latest_ts):
-    current = ta_data["current_price"]
-    ind     = ta_data["indicators"]
-    ma20    = ind.get("price_vs_ma20_pct")
-    pct_str = f"{ma20:+.2f}% vs MA20" if ma20 is not None else ""
-    color_cls = "price-up" if (ma20 or 0) >= 0 else "price-down"
-    arrow     = "▲" if (ma20 or 0) >= 0 else "▼"
+def render_header(symbol, timeframe, ta_data, kline_count, latest_ts):
+    current  = ta_data["current_price"]
+    ma20_pct = ta_data["indicators"].get("price_vs_ma20_pct")
+    arrow    = "▼" if (ma20_pct or 0) < 0 else "▲"
+    pct_cls  = "ph-down" if (ma20_pct or 0) < 0 else "ph-up"
+    pct_str  = f"{ma20_pct:+.2f}% vs MA20" if ma20_pct is not None else ""
 
     st.markdown(f"""
 <div class="price-header">
-  <span class="price-symbol">{symbol}</span>
-  <span class="price-meta">{timeframe}</span>
-  <span class="price-value">{current:,.4g}</span>
-  <span class="{color_cls}">{arrow} {pct_str}</span>
-  <span class="price-meta" style="margin-left:auto">{kline_count} 根K线 &nbsp;·&nbsp; 最新 {latest_ts}</span>
+  <span class="ph-symbol">{symbol}</span>
+  <span class="ph-tf">{timeframe}</span>
+  <span class="ph-price">{current:,.4g}</span>
+  <span class="{pct_cls}">{arrow} {pct_str}</span>
+  <span class="ph-right">{kline_count} 根K线 &nbsp;·&nbsp; 最新 {latest_ts}</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -316,7 +335,7 @@ def render_price_header(symbol: str, timeframe: str, ta_data: dict, kline_count:
 # 指标卡片
 # ─────────────────────────────────────────────
 def render_metrics(ta_data: dict):
-    ind = ta_data["indicators"]
+    ind       = ta_data["indicators"]
     rsi       = ind["rsi"]
     macd_hist = ind["macd_histogram"]
     vol_ratio = ind["volume_ratio_5_20"]
@@ -329,10 +348,10 @@ def render_metrics(ta_data: dict):
     ma_label   = f"{'↑' if ma20_pct and ma20_pct > 0 else '↓'} MA20" if ma20_pct else "N/A"
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("RSI (14)",    f"{rsi}",             rsi_delta)
-    c2.metric("MACD 柱",     f"{macd_hist:+.4f}",  macd_label)
-    c3.metric("量比 5/20",   f"{vol_ratio}x",       vol_label)
-    c4.metric("MA20 偏离",   f"{ma20_pct:+.2f}%" if ma20_pct else "N/A", ma_label)
+    c1.metric("RSI (14)",   f"{rsi}",            rsi_delta)
+    c2.metric("MACD 柱",    f"{macd_hist:+.4f}", macd_label)
+    c3.metric("量比 5/20",  f"{vol_ratio}x",      vol_label)
+    c4.metric("MA20 偏离",  f"{ma20_pct:+.2f}%" if ma20_pct else "N/A", ma_label)
 
 
 # ─────────────────────────────────────────────
@@ -367,11 +386,10 @@ def stream_report(ta_data: dict, model: str):
 # ─────────────────────────────────────────────
 if not run_btn:
     st.markdown("""
-<div style="display:flex;align-items:center;gap:12px;padding:48px 0 16px 0;">
-  <span style="font-size:36px;">🕯</span>
-  <span style="font-size:24px;font-weight:700;color:#161616;">Quant Levels Agent</span>
+<div style="padding:80px 0 16px 0;text-align:center;">
+  <div style="font-size:22px;font-weight:700;color:#161616;margin-bottom:8px;">Quant Levels Agent</div>
+  <div style="font-size:13px;color:#999999;">← 在左侧设置参数后点击「开始分析」</div>
 </div>
-<p style="color:#8D8D8D;">← 在左侧设置参数后点击「开始分析」</p>
 """, unsafe_allow_html=True)
     st.stop()
 
@@ -390,8 +408,8 @@ with st.spinner(f"获取 {symbol} {timeframe} 数据..."):
 # 2. TA 计算
 ta_data = analyze(df, symbol, timeframe)
 
-# 3. 价格 Header
-render_price_header(symbol, timeframe, ta_data, len(df), df.index[-1])
+# 3. Header
+render_header(symbol, timeframe, ta_data, len(df), df.index[-1])
 
 # 4. K 线图
 st.plotly_chart(build_chart(df, ta_data), use_container_width=True)
@@ -417,7 +435,7 @@ except Exception as e:
 
 st.divider()
 
-# 7. 操作区
+# 6. 操作区
 col_copy, col_push = st.columns([3, 2])
 
 with col_copy:
@@ -442,6 +460,6 @@ with col_push:
                     except Exception as e:
                         st.error(f"推送失败：{e}")
 
-# 8. 原始 TA 数据（折叠）
+# 7. 原始 TA 数据（折叠）
 with st.expander("🔬 查看原始 TA 数据"):
     st.json(ta_data)
