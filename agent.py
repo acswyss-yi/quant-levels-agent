@@ -274,6 +274,158 @@ SYSTEM_PROMPT = """你是一名专业的量化交易分析师，擅长多维度�
 4. 语言简洁，去掉废话"""
 
 
+# ─────────────────────────────────────────────
+# Agent 层（Tool Calling 循环）
+# ─────────────────────────────────────────────
+AGENT_SYSTEM_PROMPT = """你是一名专业的量化交易分析师 Agent，可以主动调用工具获取多周期数据进行共振分析。
+
+分析策略：
+1. 先获取用户指定周期的数据作为主视图
+2. 若信号不够明朗（RSI中性区间 / MACD 弱信号 / 支撑阻力位稀疏），主动获取相邻周期做共振验证
+   - 4h 主图 → 可补充 1h 细节
+   - 日线主图 → 可补充 4h 趋势
+3. 综合所有周期数据输出报告
+
+报告格式（严格遵守）：
+
+【{symbol} {timeframe} 关键价位分析】
+
+当前价格：xxx
+
+📌 关键支撑位：
+- xxxxx（来源：swing low N次 / MA50 / Fib 0.618 等）
+- xxxxx
+
+🚧 关键阻力位：
+- xxxxx
+- xxxxx
+
+📊 市场情绪：
+[综合 RSI / MACD / 量比 / 均线，2-3 句]
+
+🎯 综合判断：偏突破 / 偏震荡 / 偏回踩 / 偏反转（选其一）
+[若有多周期共振，注明共振情况]
+
+⚠️ 风险提示：[1-2 句]
+
+置信度：xx%（信号越共振越高，矛盾越多越低）
+
+规则：只选最重要的 2-3 个支撑/阻力位，置信度 60-90%，严格基于数据，不编造。"""
+
+TOOL_DEFINITIONS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "fetch_and_analyze",
+            "description": (
+                "获取指定标的和K线周期的行情数据，计算支撑阻力位、RSI、MACD、"
+                "Fibonacci、成交量分布等技术指标，返回结构化分析数据。"
+                "可多次调用以获取不同周期做共振验证。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "标的代码，如 BTC / ETH / AAPL / 600519",
+                    },
+                    "timeframe": {
+                        "type": "string",
+                        "enum": ["15min", "1h", "4h", "日线"],
+                        "description": "K线周期",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "K线数量，默认 300",
+                    },
+                },
+                "required": ["symbol", "timeframe"],
+            },
+        },
+    }
+]
+
+
+def _execute_tool(name: str, args: dict) -> dict:
+    if name == "fetch_and_analyze":
+        sym = args["symbol"]
+        tf  = args["timeframe"]
+        lim = args.get("limit", 300)
+        df  = fetch_ohlcv(sym, tf, lim)
+        return analyze(df, sym, tf)
+    raise ValueError(f"未知工具: {name}")
+
+
+def run_agent(
+    symbol: str,
+    timeframe: str,
+    limit: int,
+    model: str,
+    client: OpenAI,
+    on_tool_call=None,   # callback(symbol, timeframe) 用于 UI 进度
+) -> str:
+    """
+    真正的 Agent 循环：
+    - LLM 自主决定调用哪些工具、调用几次
+    - 最多 6 轮防止死循环
+    - on_tool_call(sym, tf): 每次工具调用前回调
+    """
+    messages = [
+        {"role": "system", "content": AGENT_SYSTEM_PROMPT},
+        {"role": "user",   "content": (
+            f"请分析 {symbol} {timeframe} 的支撑阻力位与市场状态，"
+            f"K线数量 {limit}。如有必要请主动获取辅助周期数据。"
+        )},
+    ]
+
+    for _ in range(6):
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=TOOL_DEFINITIONS,
+            tool_choice="auto",
+            temperature=0.3,
+        )
+        msg = response.choices[0].message
+
+        # 构建 assistant 消息
+        msg_dict: dict = {"role": "assistant", "content": msg.content or ""}
+        if msg.tool_calls:
+            msg_dict["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    },
+                }
+                for tc in msg.tool_calls
+            ]
+        messages.append(msg_dict)
+
+        # 无工具调用 → 最终报告
+        if not msg.tool_calls:
+            return msg.content or ""
+
+        # 执行工具
+        for tc in msg.tool_calls:
+            args = json.loads(tc.function.arguments)
+            if on_tool_call:
+                on_tool_call(args.get("symbol", symbol), args.get("timeframe", timeframe))
+            try:
+                result = _execute_tool(tc.function.name, args)
+            except Exception as e:
+                result = {"error": str(e)}
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": json.dumps(result, ensure_ascii=False),
+            })
+
+    return "分析轮次超限，请重试。"
+
+
 def llm_analyze(client: OpenAI, ta_data: dict, model: str = "qwen-max") -> str:
     user_msg = (
         f"请分析以下市场数据：\n\n"

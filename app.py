@@ -12,7 +12,7 @@ from openai import OpenAI
 
 from agent import (
     fetch_ohlcv, analyze, send_dingtalk,
-    SYSTEM_PROMPT,
+    SYSTEM_PROMPT, run_agent,
 )
 
 # ─────────────────────────────────────────────
@@ -355,30 +355,30 @@ def render_metrics(ta_data: dict):
 
 
 # ─────────────────────────────────────────────
-# 流式 LLM 输出
+# Agent 运行（含工具调用进度展示）
 # ─────────────────────────────────────────────
-def stream_report(ta_data: dict, model: str):
+def run_agent_ui(symbol: str, timeframe: str, limit: int, model: str) -> str:
     client = OpenAI(
         api_key=st.session_state["qwen_api_key"],
         base_url=QWEN_BASE_URL,
     )
-    user_msg = (
-        f"请分析以下市场数据：\n\n"
-        f"```json\n{json.dumps(ta_data, ensure_ascii=False, indent=2)}\n```"
-    )
-    stream = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": user_msg},
-        ],
-        temperature=0.3,
-        stream=True,
-    )
-    for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            yield delta
+
+    with st.status("🤖 Agent 分析中...", expanded=True) as status:
+        tool_steps = []
+
+        def on_tool_call(sym, tf):
+            msg = f"📊 获取 **{sym}** `{tf}` 数据并计算技术指标"
+            tool_steps.append(msg)
+            st.markdown(msg)
+
+        report = run_agent(symbol, timeframe, limit, model, client,
+                           on_tool_call=on_tool_call)
+
+        rounds = len(tool_steps)
+        label = f"分析完成（共调用 {rounds} 次工具{'，多周期共振' if rounds > 1 else ''}）"
+        status.update(label=label, state="complete", expanded=False)
+
+    return report
 
 
 # ─────────────────────────────────────────────
@@ -419,18 +419,13 @@ render_metrics(ta_data)
 
 st.divider()
 
-# 6. LLM 流式报告
+# 6. Agent 报告
 st.markdown("#### 🤖 千问分析报告")
-report_placeholder = st.empty()
-full_report = ""
 try:
-    with st.spinner("千问分析中..."):
-        for chunk in stream_report(ta_data, model):
-            full_report += chunk
-            report_placeholder.markdown(full_report + "▌")
-    report_placeholder.markdown(full_report)
+    full_report = run_agent_ui(symbol, timeframe, limit, model)
+    st.markdown(full_report)
 except Exception as e:
-    st.error(f"千问调用失败：{e}")
+    st.error(f"Agent 调用失败：{e}")
     st.stop()
 
 st.divider()
