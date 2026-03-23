@@ -404,7 +404,7 @@ except Exception as e:
 st.divider()
 
 # 7. 操作区
-col_copy, col_push = st.columns([3, 2])
+col_copy, col_push = st.columns([4, 1.5])
 
 with col_copy:
     st.code(full_report, language=None)
