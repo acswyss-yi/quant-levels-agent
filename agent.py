@@ -46,9 +46,9 @@ CRYPTO_SYMBOLS = {"BTC", "ETH", "SOL", "BNB", "XRP", "DOGE"}
 def fetch_ohlcv(symbol: str, timeframe: str, limit: int = 300) -> pd.DataFrame:
     """
     统一数据入口，根据标的自动路由：
-      - 加密货币  → ccxt (Binance)
-      - A股/港股  → akshare（纯数字 symbol 或港股 .HK 后缀）
-      - 美股      → yfinance
+      - 加密货币  → ccxt (OKX/Gateio/Bybit)
+      - A股       → akshare（纯数字 symbol）
+      - 美股      → akshare 东方财富接口（国内可直接访问）
     """
     sym = symbol.upper()
     if sym in CRYPTO_SYMBOLS or sym.endswith("USDT"):
@@ -58,9 +58,7 @@ def fetch_ohlcv(symbol: str, timeframe: str, limit: int = 300) -> pd.DataFrame:
     elif symbol.isdigit():
         return _fetch_akshare(symbol, timeframe, limit)
     else:
-        tf_map = {"15min": "15m", "1h": "1h", "4h": "1h", "日线": "1d"}
-        period = {"15min": "60d", "1h": "2y", "4h": "2y", "日线": "5y"}
-        return _fetch_yfinance(sym, tf_map[timeframe], period[timeframe], limit)
+        return _fetch_us_stock(sym, timeframe, limit)
 
 
 def _fetch_crypto(pair: str, tf: str, limit: int) -> pd.DataFrame:
@@ -87,15 +85,54 @@ def _fetch_crypto(pair: str, tf: str, limit: int) -> pd.DataFrame:
     raise ConnectionError(f"所有交易所均无法访问，最后错误：{last_err}")
 
 
-def _fetch_yfinance(sym: str, interval: str, period: str, limit: int) -> pd.DataFrame:
+def _resolve_us_symbol(ak, ticker: str) -> str:
+    """将纯 ticker（如 AAPL）转换为东方财富 secid 格式（如 105.AAPL）。
+    依次尝试 NASDAQ(105)、NYSE(106)、AMEX(107)，返回有数据的第一个。"""
+    for market in ("105", "106", "107"):
+        full = f"{market}.{ticker}"
+        try:
+            df = ak.stock_us_hist(symbol=full, period="daily",
+                                  start_date="20240101", end_date="20240110")
+            if not df.empty:
+                return full
+        except Exception:
+            continue
+    raise ValueError(f"无法在东方财富找到美股代码：{ticker}，请确认代码正确")
+
+
+def _fetch_us_stock(sym: str, timeframe: str, limit: int) -> pd.DataFrame:
+    """美股数据：yfinance（优先）→ 降级日线（akshare 东方财富）"""
+    # ── 优先尝试 yfinance ──────────────────────────────────────
     try:
         import yfinance as yf
+        interval_map = {"15min": "15m", "1h": "1h", "4h": "1h", "日线": "1d"}
+        period_map   = {"15min": "60d", "1h": "730d", "4h": "730d", "日线": "max"}
+        df = yf.download(sym, interval=interval_map[timeframe],
+                         period=period_map[timeframe], progress=False, auto_adjust=True)
+        if df.empty:
+            raise ValueError("yfinance 返回空数据")
+        df.index = pd.to_datetime(df.index).tz_localize(None)
+        df.columns = [c[0].lower() if isinstance(c, tuple) else c.lower() for c in df.columns]
+        df = df[["open", "high", "low", "close", "volume"]]
+        if timeframe == "4h":
+            df = df.resample("4h").agg({"open": "first", "high": "max",
+                                        "low": "min", "close": "last", "volume": "sum"}).dropna()
+        return df.tail(limit)
+    except Exception:
+        pass
+
+    # ── 降级：akshare 日线（稳定可用）────────────────────────────
+    try:
+        import akshare as ak
     except ImportError:
-        raise ImportError("pip install yfinance")
-    df = yf.Ticker(sym).history(period=period, interval=interval)
-    df.index.name = "ts"
-    df.columns = [c.lower() for c in df.columns]
-    return df[["open", "high", "low", "close", "volume"]].tail(limit)
+        raise ImportError("pip install akshare")
+
+    full_sym = _resolve_us_symbol(ak, sym)
+    df = ak.stock_us_hist(symbol=full_sym, period="daily", adjust="qfq").tail(limit)
+    df = df.rename(columns={"日期": "ts", "开盘": "open", "最高": "high",
+                             "最低": "low", "收盘": "close", "成交量": "volume"})
+    df["ts"] = pd.to_datetime(df["ts"])
+    return df.set_index("ts")[["open", "high", "low", "close", "volume"]]
 
 
 def _fetch_akshare(sym: str, timeframe: str, limit: int) -> pd.DataFrame:
