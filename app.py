@@ -90,18 +90,6 @@ hr { border-color: #E0E0E0 !important; }
     background-color: #0052CC !important;
 }
 
-/* Token 弹框居中缩小 */
-[data-testid='stDialog'] > div {
-    max-width: 360px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-}
-
 /* 指标卡片 */
 [data-testid='stMetric'] {
     background-color: #F9FAFB;
@@ -117,10 +105,9 @@ hr { border-color: #E0E0E0 !important; }
 }
 [data-testid='stMetricDelta'] { font-size: 12px !important; }
 
-/* 弹框遮罩半透明 */
+/* 弹框遮罩 */
 [data-testid='stDialogOverlay'] {
-    background: rgba(0, 0, 0, 0.25) !important;
-    backdrop-filter: blur(3px) !important;
+    background: rgba(0, 0, 0, 0.4) !important;
 }
 
 /* header 行 */
@@ -183,30 +170,16 @@ QWEN_BASE_URL  = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 # ─────────────────────────────────────────────
 # 千问 Token 弹框
 # ─────────────────────────────────────────────
-@st.dialog("配置千问 API Token")
+@st.dialog("Quant Levels Agent")
 def qwen_token_dialog():
-    st.markdown("""
-<div style="text-align:center;padding:8px 0 16px 0;">
-  <div style="font-size:32px;margin-bottom:8px;">🔑</div>
-  <div style="font-size:13px;color:#666666;line-height:1.6;">
-    输入阿里云百炼平台 API Key<br>
-    <a href="https://bailian.console.aliyun.com/" target="_blank"
-       style="color:#0068FF;font-size:12px;">前往控制台获取 →</a>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-    token = st.text_input(
-        "DASHSCOPE_API_KEY",
-        type="password",
-        placeholder="sk-xxxxxxxxxxxx",
-        label_visibility="collapsed",
-    )
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    if st.button("确认", type="primary", use_container_width=True):
-        if not token.strip():
-            st.warning("Token 不能为空")
+    st.markdown("请输入**阿里云百炼 API Key** 以继续使用。")
+    token = st.text_input("API Key", type="password", placeholder="sk-xxxxxxxxxxxx")
+    if st.button("确认", use_container_width=True):
+        clean = token.strip().encode("ascii", "ignore").decode("ascii")
+        if not clean:
+            st.error("API Key 不能为空，请重新输入。")
         else:
-            st.session_state["qwen_api_key"] = token.strip()
+            st.session_state["qwen_api_key"] = clean
             st.rerun()
 
 
@@ -430,7 +403,7 @@ except Exception as e:
 
 st.divider()
 
-# 6. 操作区
+# 7. 操作区
 col_copy, col_push = st.columns([3, 2])
 
 with col_copy:
@@ -455,6 +428,6 @@ with col_push:
                     except Exception as e:
                         st.error(f"推送失败：{e}")
 
-# 7. 原始 TA 数据（折叠）
+# 8. 原始 TA 数据（折叠）
 with st.expander("🔬 查看原始 TA 数据"):
     st.json(ta_data)
