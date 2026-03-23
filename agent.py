@@ -85,33 +85,54 @@ def _fetch_crypto(pair: str, tf: str, limit: int) -> pd.DataFrame:
     raise ConnectionError(f"所有交易所均无法访问，最后错误：{last_err}")
 
 
+def _resolve_us_symbol(ak, ticker: str) -> str:
+    """将纯 ticker（如 AAPL）转换为东方财富 secid 格式（如 105.AAPL）。
+    依次尝试 NASDAQ(105)、NYSE(106)、AMEX(107)，返回有数据的第一个。"""
+    for market in ("105", "106", "107"):
+        full = f"{market}.{ticker}"
+        try:
+            df = ak.stock_us_hist(symbol=full, period="daily",
+                                  start_date="20240101", end_date="20240110")
+            if not df.empty:
+                return full
+        except Exception:
+            continue
+    raise ValueError(f"无法在东方财富找到美股代码：{ticker}，请确认代码正确")
+
+
 def _fetch_us_stock(sym: str, timeframe: str, limit: int) -> pd.DataFrame:
-    """使用 AKShare 东方财富接口获取美股数据，国内可直接访问"""
+    """美股数据：yfinance（优先）→ 降级日线（akshare 东方财富）"""
+    # ── 优先尝试 yfinance ──────────────────────────────────────
+    try:
+        import yfinance as yf
+        interval_map = {"15min": "15m", "1h": "1h", "4h": "1h", "日线": "1d"}
+        period_map   = {"15min": "60d", "1h": "730d", "4h": "730d", "日线": "max"}
+        df = yf.download(sym, interval=interval_map[timeframe],
+                         period=period_map[timeframe], progress=False, auto_adjust=True)
+        if df.empty:
+            raise ValueError("yfinance 返回空数据")
+        df.index = pd.to_datetime(df.index).tz_localize(None)
+        df.columns = [c[0].lower() if isinstance(c, tuple) else c.lower() for c in df.columns]
+        df = df[["open", "high", "low", "close", "volume"]]
+        if timeframe == "4h":
+            df = df.resample("4h").agg({"open": "first", "high": "max",
+                                        "low": "min", "close": "last", "volume": "sum"}).dropna()
+        return df.tail(limit)
+    except Exception:
+        pass
+
+    # ── 降级：akshare 日线（稳定可用）────────────────────────────
     try:
         import akshare as ak
     except ImportError:
         raise ImportError("pip install akshare")
 
-    if timeframe == "日线":
-        df = ak.stock_us_hist(symbol=sym, period="daily", adjust="qfq").tail(limit)
-        df = df.rename(columns={"日期": "ts", "开盘": "open", "最高": "high",
-                                 "最低": "low", "收盘": "close", "成交量": "volume"})
-        df["ts"] = pd.to_datetime(df["ts"])
-        return df.set_index("ts")[["open", "high", "low", "close", "volume"]]
-
-    # 分钟级数据：15min→"15", 1h→"60", 4h→用60分钟重采样
-    period_map = {"15min": "15", "1h": "60", "4h": "60"}
-    df = ak.stock_us_hist_min_em(symbol=sym, period=period_map[timeframe], adjust="qfq")
-    df = df.rename(columns={"时间": "ts", "开盘": "open", "最高": "high",
+    full_sym = _resolve_us_symbol(ak, sym)
+    df = ak.stock_us_hist(symbol=full_sym, period="daily", adjust="qfq").tail(limit)
+    df = df.rename(columns={"日期": "ts", "开盘": "open", "最高": "high",
                              "最低": "low", "收盘": "close", "成交量": "volume"})
     df["ts"] = pd.to_datetime(df["ts"])
-    df = df.set_index("ts")[["open", "high", "low", "close", "volume"]]
-
-    if timeframe == "4h":
-        df = df.resample("4h").agg({"open": "first", "high": "max",
-                                    "low": "min", "close": "last", "volume": "sum"}).dropna()
-
-    return df.tail(limit)
+    return df.set_index("ts")[["open", "high", "low", "close", "volume"]]
 
 
 def _fetch_akshare(sym: str, timeframe: str, limit: int) -> pd.DataFrame:
