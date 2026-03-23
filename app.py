@@ -241,12 +241,12 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 # K 线图
 # ─────────────────────────────────────────────
-CHART_BG    = "#FFFFFF"
-CHART_PANEL = "#F9FAFB"
-CHART_GRID  = "#E0E0E0"
-COLOR_UP    = "#24A148"
-COLOR_DOWN  = "#DA1E28"
-COLOR_BLUE  = "#0068FF"
+CHART_BG    = "#131722"
+CHART_PANEL = "#131722"
+CHART_GRID  = "#1E2535"
+COLOR_UP    = "#26A69A"
+COLOR_DOWN  = "#EF5350"
+COLOR_BLUE  = "#2196F3"
 
 def build_chart(df, ta_data: dict) -> go.Figure:
     fig = make_subplots(
@@ -300,7 +300,7 @@ def build_chart(df, ta_data: dict) -> go.Figure:
         height=580,
         paper_bgcolor=CHART_BG,
         plot_bgcolor=CHART_PANEL,
-        font=dict(color="#666666", family="Inter, sans-serif"),
+        font=dict(color="#B2B5BE", family="Inter, sans-serif"),
         xaxis_rangeslider_visible=False,
         showlegend=False,
         margin=dict(l=10, r=90, t=8, b=8),
